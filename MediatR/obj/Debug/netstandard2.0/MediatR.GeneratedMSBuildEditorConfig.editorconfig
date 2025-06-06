@@ -1,0 +1,5 @@
+is_global = true
+build_property.RootNamespace = MediatR
+build_property.ProjectDir = D:\.net\MediatR\MediatR\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
