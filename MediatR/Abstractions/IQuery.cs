@@ -8,7 +8,7 @@
     /// <summary>
     /// Event to be sent. Use this if the event is to be handled by a single handler.
     /// </summary>
-    public interface IQuery<out T> { }
+    public interface IQuery<in T> { }
 
     /// <summary>
     /// Event to be sent. Use this if the event is to be handled by a multiple handlers.
@@ -18,6 +18,6 @@
     /// <summary>
     /// Event to be sent. Use this if the event is to be handled by a multiple handlers.
     /// </summary>
-    public interface INotification<out T> { }
+    public interface INotification<in T> { }
 
 }
