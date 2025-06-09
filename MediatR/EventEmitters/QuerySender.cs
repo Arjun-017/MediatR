@@ -17,17 +17,26 @@ namespace MediatR.Publishers
         {
             if (token.IsCancellationRequested) return;
 
-            var handlerType = _queryHandlerResolver.GetQueryHandlerType(query.GetType());
+            var queryType = query.GetType();
+            var handlerType = _queryHandlerResolver.GetQueryHandlerType(queryType);
             var handler = Activator.CreateInstance(handlerType);
-
+            
             var handlerDelegate = _queryHandlerResolver.GetQueryHandlerExecutionDelegate(handlerType);
-
             await handlerDelegate(handler, query, token);
         }
 
-        public Task<T> SendAsync<T>(IQuery<T> query, CancellationToken token)
+        public async Task<T> SendAsync<T>(IQuery<T> query, CancellationToken token)
         {
-            throw new NotImplementedException();
+            if (token.IsCancellationRequested) return await Task.FromCanceled<T>(token);
+
+            var queryType = query.GetType();
+            var handlerType = _queryHandlerResolver.GetQueryHandlerType(queryType);
+            var handler = Activator.CreateInstance(handlerType);
+
+            var handlerDelegate = _queryHandlerResolver.GetQueryHandlerExecutionDelegateWithResult(handlerType);
+            T result = (T)await handlerDelegate(handler, query, token);
+
+            return result;
         }
     }
 }

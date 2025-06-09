@@ -9,5 +9,6 @@ namespace MediatR.Abstractions
         void MapQueryToHandler(Assembly executingAssembly);
         Type GetQueryHandlerType(Type query);
         QueryHandlerExecutionDelegate GetQueryHandlerExecutionDelegate(Type queryHandlerType);
+        QueryHandlerExecutionDelegateWithResult GetQueryHandlerExecutionDelegateWithResult(Type queryHandlerType);
     }
 }
