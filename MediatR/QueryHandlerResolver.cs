@@ -11,65 +11,61 @@ namespace MediatR
 {
     internal class QueryHandlerResolver : IQueryHandlerResolver
     {
+        private ConcurrentBag<Type> _queryHandlerTypes;
         private ConcurrentDictionary<Type, Type> _queryHandlerMapping = new ConcurrentDictionary<Type, Type>();
         private ConcurrentDictionary<Type, QueryHandlerExecutionDelegate> _queryHandlerExecutionDelegateMapping = new ConcurrentDictionary<Type, QueryHandlerExecutionDelegate>();
-        private ConcurrentDictionary<Type, QueryHandlerExecutionDelegateWithResult> _queryHandlerExecutionDelegateWithResultMapping = new ConcurrentDictionary<Type, QueryHandlerExecutionDelegateWithResult>();
+        private ConcurrentDictionary<Type, Delegate> _queryHandlerExecutionDelegateWithResultMapping = new ConcurrentDictionary<Type, Delegate>();
+        // keeping it delegate coz concurrent dictionary does not support generic type
 
-        public void MapQueryToHandler(Assembly executingAssembly)
+        public void AddAssemblyTypes(Assembly executingAssembly)
         {
             var assemblyTypes = executingAssembly.GetTypes().ToList();
-
-            var queryTypes = assemblyTypes.Where(x => x.IsClass && !x.IsAbstract 
-                && (typeof(IQuery).IsAssignableFrom(x) || typeof(IQuery<>).IsAssignableFrom(x)));
-
-            foreach (var queryType in queryTypes)
-            {
-                var handlerContractType = queryType.IsGenericType ? typeof(IQueryHandler<>).MakeGenericType(queryType, queryType.GetGenericArguments().First())
-                    : typeof(IQueryHandler<>).MakeGenericType(queryType);
-                var handlerTypes = assemblyTypes.Where(x => handlerContractType.IsAssignableFrom(x)).ToList();
-
-                if (handlerTypes.Count == 0) throw new InvalidOperationException($"No handler found for the query type {queryType.Name}");
-
-                if (handlerTypes.Count > 1) throw new InvalidOperationException($"More than one handlers found for the type {queryType.Name}");
-
-                var handlerType = handlerTypes.First();
-                _queryHandlerMapping.TryAdd(queryType, handlerType);
-
-                if(queryType.IsGenericType)
-                {
-                    var handlerDelegate = ConvertMethodInfoToHandlerExecutionDelegate<QueryHandlerExecutionDelegate>(handlerType);
-                    _queryHandlerExecutionDelegateMapping.TryAdd(handlerType, handlerDelegate);
-                }
-                else {
-                    var handlerDelegate = ConvertMethodInfoToHandlerExecutionDelegate<QueryHandlerExecutionDelegateWithResult>(handlerType);
-                    _queryHandlerExecutionDelegateWithResultMapping.TryAdd(handlerType, handlerDelegate);
-                }
-                    
-            }
+            var queryHandlerTypes = assemblyTypes.Where(x => x.IsClass && !x.IsAbstract && typeof(IBaseHandler).IsAssignableFrom(x));
+            _queryHandlerTypes = new ConcurrentBag<Type>(queryHandlerTypes);
         }
 
-        public Type GetQueryHandlerType(Type query)
+        public Type GetQueryHandlerType(Type queryType, Type returnType = default)
         {
-            return _queryHandlerMapping[query];
+            return _queryHandlerMapping.GetOrAdd(queryType, (key) =>
+            {
+                var handlerContractType = returnType != default ? typeof(IQueryHandler<,>).MakeGenericType(new Type[] { key, returnType })
+                : typeof(IQueryHandler<>).MakeGenericType(key);
+
+                var handlerTypes = _queryHandlerTypes.Where(x => handlerContractType.IsAssignableFrom(x)).ToList();
+
+                if (handlerTypes.Count == 0) throw new InvalidOperationException($"No handler found for the query type {key.Name}");
+
+                if (handlerTypes.Count > 1) throw new InvalidOperationException($"More than one handlers found for the type {key.Name}");
+
+                var handlerType = handlerTypes.First();
+                
+                return handlerType;
+            });
         }
 
         public QueryHandlerExecutionDelegate GetQueryHandlerExecutionDelegate(Type queryHandler)
         {
-            return _queryHandlerExecutionDelegateMapping[queryHandler];
+            return _queryHandlerExecutionDelegateMapping.GetOrAdd(queryHandler, (key) =>
+            {
+                return ConvertMethodInfoToHandlerExecutionDelegate<QueryHandlerExecutionDelegate>(key);
+            });
         }
-
-        public QueryHandlerExecutionDelegateWithResult GetQueryHandlerExecutionDelegateWithResult(Type queryHandler)
+         
+        public QueryHandlerExecutionDelegateWithResult<TResult> GetQueryHandlerExecutionDelegateWithResult<TResult>(Type queryHandler)
         {
-            return _queryHandlerExecutionDelegateWithResultMapping[queryHandler];
+            return (QueryHandlerExecutionDelegateWithResult<TResult>)_queryHandlerExecutionDelegateWithResultMapping.GetOrAdd(queryHandler, (key) =>
+            {
+                return ConvertMethodInfoToHandlerExecutionDelegate<QueryHandlerExecutionDelegateWithResult<TResult>>(key);
+            });
         }
 
         public delegate Task QueryHandlerExecutionDelegate(object handlerInstance, object query, CancellationToken token);
 
-        public delegate Task<object> QueryHandlerExecutionDelegateWithResult(object handlerInstance, object query, CancellationToken token);
+        public delegate Task<TResult> QueryHandlerExecutionDelegateWithResult<TResult>(object handlerInstance, object query, CancellationToken token);
 
         #region
 
-        private TDelegate ConvertMethodInfoToHandlerExecutionDelegate<TDelegate>(Type queryHandlerType)
+        private TDelegate ConvertMethodInfoToHandlerExecutionDelegate<TDelegate>(Type queryHandlerType) where TDelegate : Delegate
         {
             // (object handlerInstance, object query) => handlerInstance.HandleAsync(queryInstance, token)
 
@@ -83,9 +79,10 @@ namespace MediatR
             var castedQuery = Expression.Convert(queryInstanceParam, parameterType);
 
             var expressionCall = Expression.Call(castedHandler, handleAsyncMethodInfo, castedQuery, tokenInstanceParam);
-            var delegateExpression = Expression.Lambda<TDelegate>(expressionCall, handlerInstanceParam, queryInstanceParam, tokenInstanceParam);
             
-            return delegateExpression.Compile();
+            var delegateExpression = Expression.Lambda(typeof(TDelegate), expressionCall, handlerInstanceParam, queryInstanceParam, tokenInstanceParam);
+            
+            return (TDelegate)delegateExpression.Compile();
         }
 
         #endregion

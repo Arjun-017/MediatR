@@ -6,9 +6,9 @@ namespace MediatR.Abstractions
 {
     internal interface IQueryHandlerResolver
     {
-        void MapQueryToHandler(Assembly executingAssembly);
-        Type GetQueryHandlerType(Type query);
+        void AddAssemblyTypes(Assembly executingAssembly);
+        Type GetQueryHandlerType(Type queryType, Type returnType = default);
         QueryHandlerExecutionDelegate GetQueryHandlerExecutionDelegate(Type queryHandlerType);
-        QueryHandlerExecutionDelegateWithResult GetQueryHandlerExecutionDelegateWithResult(Type queryHandlerType);
+        QueryHandlerExecutionDelegateWithResult<TResult> GetQueryHandlerExecutionDelegateWithResult<TResult>(Type queryHandlerType);
     }
 }

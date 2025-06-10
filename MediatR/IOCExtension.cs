@@ -12,7 +12,7 @@ namespace MediatR
             services.AddSingleton<IQueryHandlerResolver>((sp) =>
             {
                 IQueryHandlerResolver resolver = new QueryHandlerResolver();
-                resolver.MapQueryToHandler(executingAssembly);
+                resolver.AddAssemblyTypes(executingAssembly);
             
                 return resolver;
             });

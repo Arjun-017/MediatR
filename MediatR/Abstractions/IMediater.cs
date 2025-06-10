@@ -23,7 +23,7 @@ namespace MediatR.Abstractions
         /// </summary>
         /// <param name="query">The event that extends IQuery<typeparamref name="T"/></param>
         /// <param name="token">CancellationToken token</param>
-        Task<T> SendAsync<T>(IQuery<T> query, CancellationToken token);
+        Task<T> SendAsync<T>(IQuery<T> query, CancellationToken token = default);
     }
 
     /// <summary>
@@ -35,12 +35,12 @@ namespace MediatR.Abstractions
         /// </summary>
         /// <param name="notification">The event that extends INotification</param>
         /// <param name="token">CancellationToken token</param>
-        Task SendAsync(INotification notification, CancellationToken token);
+        Task SendAsync(INotification notification, CancellationToken token = default);
         /// <summary>
         /// Sends an event to all the handlers
         /// </summary>
         /// <param name="notification">The event that extends INotification<typeparamref name="T"/></param>
         /// <param name="token">CancellationToken token</param>
-        Task<T> SendAsync<T>(INotification<T> query, CancellationToken token);
+        Task<T> SendAsync<T>(INotification<T> query, CancellationToken token = default);
     }
 }
