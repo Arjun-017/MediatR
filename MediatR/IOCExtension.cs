@@ -1,25 +1,25 @@
-﻿using System.Reflection;
+﻿using System;
 using MediatR.Abstractions;
 using MediatR.Publishers;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace MediatR
+namespace MediatR;
+
+public static class IOCExtension
 {
-    public static class IOCExtension
+    public static IServiceCollection AddMediater(this IServiceCollection services, Action<MediaterConfiguration> configureAction)
     {
-        public static IServiceCollection AddMediater(this IServiceCollection services, Assembly executingAssembly)
-        {
-            services.AddSingleton<IQueryHandlerResolver>((sp) =>
-            {
-                IQueryHandlerResolver resolver = new QueryHandlerResolver();
-                resolver.AddAssemblyTypes(executingAssembly);
-            
-                return resolver;
-            });
+        var configuration = new MediaterConfiguration();
+        configureAction(configuration);
 
-            services.AddSingleton<ISender, QuerySender>();
+        services.AddSingleton(configuration);
+        services.AddSingleton<IQueryHandlerResolver, QueryHandlerResolver>();
 
-            return services;
-        } 
-    }
+        services.AddSingleton<ISender, RequestEmitter>();
+        services.AddSingleton<IPublisher, NotificationEmitter>();
+
+        services.AddSingleton<INotificationPublisher>((sp) => configuration.NotificationPublisher);
+
+        return services;
+    } 
 }
