@@ -1,5 +1,6 @@
 ﻿using System;
 using MediatR.Abstractions;
+using MediatR.EventEmitters.Publishers;
 using MediatR.Publishers;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,7 +19,7 @@ public static class IOCExtension
         services.AddSingleton<ISender, RequestEmitter>();
         services.AddSingleton<IPublisher, NotificationEmitter>();
 
-        services.AddSingleton<INotificationPublisher>((sp) => configuration.NotificationPublisher);
+        services.AddSingleton<INotificationPublisher>((sp) => configuration.NotificationPublisher ?? new ForEachAwaitPublisher());
 
         return services;
     } 

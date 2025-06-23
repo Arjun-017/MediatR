@@ -38,9 +38,9 @@ internal class NotificationEmitter : BaseEmitter, IPublisher
         foreach (var handlerType in handlerTypes)
         {
             var handler = GetHandlerInstance(handlerType);
+            var handlerDelegate = _queryHandlerResolver.GetQueryHandlerExecutionDelegate(handlerType);
             Func<INotification, CancellationToken, Task> executorCallback = (notificationInstance, cancellationToken) =>
             {
-                var handlerDelegate = _queryHandlerResolver.GetQueryHandlerExecutionDelegate(handlerType);
                 return handlerDelegate(handler, notificationInstance, cancellationToken);
             };
             yield return new NotificationHandlerExecutor(handler, executorCallback);

@@ -47,7 +47,7 @@ internal class QueryHandlerResolver : IQueryHandlerResolver
 
             var handlerTypes = _queryHandlerTypes.Where(x => handlerContractType.IsAssignableFrom(x)).ToList();
 
-            if (handlerTypes.Count == 0) throw new InvalidOperationException($"No handler found for the query type {key.Name}");
+            if (handlerTypes.Count == 0) throw new InvalidOperationException($"No handler found for the type {key.Name}");
 
             if (handlerTypes.Count > 1) throw new InvalidOperationException($"More than one handlers found for the type {key.Name}");
 
@@ -61,24 +61,11 @@ internal class QueryHandlerResolver : IQueryHandlerResolver
     {
         return _queryHandlersMapping.GetOrAdd(queryType, (key) =>
         {
-            bool hasNoReturnType = key.GetInterfaces().Any(i => i == typeof(IRequest));
-            Type handlerContractType;
-            if (hasNoReturnType)
-            {
-                handlerContractType = typeof(IRequestHandler<>).MakeGenericType(key);
-            }
-            else
-            {
-                Type returnType = key
-                    .GetInterfaces()
-                    .First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequest<>))
-                    .GetGenericArguments()[0];
-                handlerContractType = typeof(IQueryHandler<,>).MakeGenericType(new Type[] { key, returnType });
-            }
+            Type handlerContractType = typeof(INotificationHandler<>).MakeGenericType(key);
 
             var handlerTypes = _queryHandlerTypes.Where(x => handlerContractType.IsAssignableFrom(x)).ToList();
 
-            if (handlerTypes.Count == 0) throw new InvalidOperationException($"No handler found for the query type {key.Name}");
+            if (handlerTypes.Count == 0) throw new InvalidOperationException($"No handler found for the type {key.Name}");
 
             return handlerTypes;
         });
